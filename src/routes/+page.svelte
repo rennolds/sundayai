@@ -50,11 +50,18 @@
     }
     
     const file = selectedFiles[0];
-    const validAudioTypes = ['audio/mp3', 'audio/wav', 'audio/mpeg', 'audio/ogg'];
+    const validAudioTypes = ['audio/mp3', 'audio/wav', 'audio/mpeg', 'audio/ogg', 'audio/mp4', 'audio/x-m4a', 'video/mp4'];
     const validTextTypes = ['text/plain', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     
+    // Check file type
     if (!validAudioTypes.includes(file.type) && !validTextTypes.includes(file.type)) {
-      fileError = 'Please upload an audio file (MP3, WAV) or text file (TXT, PDF, DOC, DOCX)';
+      fileError = 'Please upload an audio file (MP3, WAV, MP4, M4A) or text file (TXT, PDF, DOC, DOCX)';
+      return;
+    }
+    
+    // Check file size if it's an audio file (25MB limit for Whisper API)
+    if (validAudioTypes.includes(file.type) && file.size > 25 * 1024 * 1024) {
+      fileError = 'Audio files must be under 25MB for transcription. Please compress your file or upload a shorter recording.';
       return;
     }
     
@@ -217,13 +224,14 @@
                 <h2 class="text-xl font-medium text-gray-700 mb-2">Upload your transcript or sermon audio</h2>
                 <p class="text-gray-500 mb-4">Drag and drop your file here, or click to select files</p>
                 <div class="text-sm text-gray-400 mb-6">
-                  <p>Supports MP3, WAV audio files or text documents (TXT, PDF, DOC, DOCX)</p>
+                  <p>Supports MP3, WAV, MP4, M4A audio files or text documents (TXT, PDF, DOC, DOCX)</p>
                   <p class="mt-1 text-blue-500 font-medium">Audio files will be transcribed automatically using AI</p>
+                  <p class="mt-1 text-yellow-600">Note: Audio files must be under 25MB</p>
                 </div>
                 
                 <label class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg cursor-pointer transition-colors">
                   Select File
-                  <input type="file" class="hidden" accept=".mp3,.wav,.txt,.pdf,.doc,.docx,audio/*" onchange={handleFileSelect} />
+                  <input type="file" class="hidden" accept=".mp3,.wav,.txt,.pdf,.doc,.docx,.mp4,.m4a,audio/*,video/mp4" onchange={handleFileSelect} />
                 </label>
                 
                 {#if fileError}

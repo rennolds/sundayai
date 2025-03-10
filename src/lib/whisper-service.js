@@ -8,23 +8,22 @@ import OpenAI from 'openai';
  */
 export async function transcribeAudio(audioFile) {
   try {
+    // Check file size - Whisper API has a 25MB limit
+    if (audioFile.size > 25 * 1024 * 1024) {
+      throw new Error('Audio file exceeds the 25MB size limit for transcription');
+    }
+
     // Initialize OpenAI client with API key from environment variable
     const openai = new OpenAI({
       apiKey: import.meta.env.VITE_OPENAI_API_KEY,
       dangerouslyAllowBrowser: true // Needed for client-side usage
     });
 
-    // Convert File to FormData for the API request
-    const formData = new FormData();
-    formData.append('file', audioFile);
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'en'); // Specify English language
-
     // Call the OpenAI API
     const response = await openai.audio.transcriptions.create({
       file: audioFile,
       model: "whisper-1",
-      language: "en"
+      language: "en" // Specify English language
     });
 
     return response.text;
