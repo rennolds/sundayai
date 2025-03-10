@@ -151,6 +151,33 @@
   function isAudioFile(file) {
     return file && file.type && file.type.startsWith('audio/');
   }
+  
+  // Download the transcript as a text file
+  function downloadTranscript() {
+    if (!transcriptState.rawText) return;
+    
+    // Create filename based on original file
+    const originalFilename = files[0]?.name || 'transcript';
+    const baseFilename = originalFilename.split('.').slice(0, -1).join('.') || 'transcript';
+    const filename = `${baseFilename}_transcript.txt`;
+    
+    // Create a blob with the transcript text
+    const blob = new Blob([transcriptState.rawText], { type: 'text/plain' });
+    
+    // Create a download link and trigger the download
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
 </script>
 
 <div class="min-h-screen bg-gray-50 flex flex-col">
@@ -255,12 +282,23 @@
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-2xl font-medium text-gray-800">What would you like to do with your transcript?</h2>
               {#if isAudioFile(files[0])}
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  AI Transcribed
-                </span>
+                <div class="flex items-center space-x-2">
+                  <button 
+                    onclick={downloadTranscript}
+                    class="inline-flex items-center px-3 py-1 border border-green-500 rounded-md text-sm font-medium bg-white text-green-700 hover:bg-green-50 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download Transcript
+                  </button>
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    AI Transcribed
+                  </span>
+                </div>
               {/if}
             </div>
             
