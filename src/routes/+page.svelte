@@ -6,12 +6,22 @@
     resetTranscript 
   } from '$lib/transcript-store.svelte.js';
   
+  import {
+    generateAIContent,
+    getContentState,
+    resetContent
+  } from '$lib/content-store.svelte.js';
+  
+  // Import our React component
+  import ContentResults from '$lib/ContentResults.svelte';
+  
   let files = $state(null);
   let dragging = $state(false);
   let fileError = $state('');
   let uploadProgress = $state(0);
   let fileUploaded = $state(false);
   let processingFile = $state(false);
+  let showResults = $state(false);
   
   // Selected sermon processing options
   let selectedOptions = $state({
@@ -27,6 +37,9 @@
   
   // Get the reactive transcript state
   const transcriptState = getTranscriptState();
+  
+  // Get the reactive content state
+  const contentState = getContentState();
   
   function handleFileSelect(event) {
     const selectedFiles = event.target.files;
@@ -96,7 +109,9 @@
     files = null;
     fileUploaded = false;
     uploadProgress = 0;
+    showResults = false;
     resetTranscript();
+    resetContent();
 
     // Reset selected options
     selectedOptions = {
@@ -122,7 +137,6 @@
       // Process the extracted text
       processTranscript(text);
       
-      // Navigate to results page or show results
       console.log('Transcript processed:', transcriptState.processedText);
       
     } catch (error) {
@@ -140,9 +154,21 @@
     }
   });
 
-  function handleGenerateContent() {
+  async function handleGenerateContent() {
     console.log('Generating content with selected options:', selectedOptions);
-    // Here you would implement the actual processing based on the selected options
+    
+    try {
+      // Generate content based on transcript and selected options
+      await generateAIContent(transcriptState.rawText, selectedOptions);
+      showResults = true;
+    } catch (error) {
+      console.error('Error generating content:', error);
+      fileError = `Error generating content: ${error.message}`;
+    }
+  }
+  
+  function handleBackToOptions() {
+    showResults = false;
   }
 
   function hasSelectedOptions() {
@@ -196,7 +222,30 @@
     
     <main class="flex-grow">
       <div class="max-w-3xl mx-auto">
-        {#if !files || !fileUploaded}
+        {#if contentState.error}
+          <div class="bg-white rounded-lg shadow-md p-8 text-center">
+            <div class="flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 class="text-2xl font-medium text-gray-800 mb-2">Error Generating Content</h2>
+            <p class="text-red-500 mb-6">{contentState.error}</p>
+            
+            <button 
+              onclick={() => showResults = false}
+              class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
+              Back to Options
+            </button>
+          </div>
+        {:else if showResults}
+          <!-- Show AI-generated content results -->
+          <ContentResults 
+            isLoading={contentState.isGenerating} 
+            results={contentState.results} 
+            onBackClick={handleBackToOptions} 
+          />
+        {:else if !files || !fileUploaded}
           <div 
             class="border-2 border-dashed rounded-lg p-10 text-center transition-colors
             {dragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}"
