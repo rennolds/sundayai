@@ -13,6 +13,18 @@
   let fileUploaded = $state(false);
   let processingFile = $state(false);
   
+  // Selected sermon processing options
+  let selectedOptions = $state({
+    sermonPrep: {
+      critique: false,
+      perspectiveFeedback: false
+    },
+    sundayContent: {
+      bibleStudyGuide: false,
+      kidsFollowAlong: false
+    }
+  });
+  
   // Get the reactive transcript state
   const transcriptState = getTranscriptState();
   
@@ -78,6 +90,18 @@
     fileUploaded = false;
     uploadProgress = 0;
     resetTranscript();
+
+    // Reset selected options
+    selectedOptions = {
+      sermonPrep: {
+        critique: false,
+        perspectiveFeedback: false
+      },
+      sundayContent: {
+        bibleStudyGuide: false,
+        kidsFollowAlong: false
+      }
+    };
   }
   
   async function processFile() {
@@ -100,6 +124,27 @@
     } finally {
       processingFile = false;
     }
+  }
+  
+  // Effect to automatically process the file when uploaded
+  $effect(() => {
+    if (fileUploaded && !processingFile && !transcriptState.isLoading && !transcriptState.rawText) {
+      processFile();
+    }
+  });
+
+  function handleGenerateContent() {
+    console.log('Generating content with selected options:', selectedOptions);
+    // Here you would implement the actual processing based on the selected options
+  }
+
+  function hasSelectedOptions() {
+    return (
+      selectedOptions.sermonPrep.critique || 
+      selectedOptions.sermonPrep.perspectiveFeedback || 
+      selectedOptions.sundayContent.bibleStudyGuide || 
+      selectedOptions.sundayContent.kidsFollowAlong
+    );
   }
 </script>
 
@@ -153,26 +198,12 @@
             </div>
           </div>
         {:else if fileUploaded && !processingFile && !transcriptState.isLoading && !transcriptState.rawText}
+          <!-- Automatically process the file when it's uploaded successfully -->
           <div class="bg-white rounded-lg shadow-md p-8 text-center">
-            <div class="flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 class="text-2xl font-medium text-gray-800 mb-2">File uploaded successfully!</h2>
-            <p class="text-gray-600 mb-6">{files[0].name}</p>
-            
-            <div class="flex justify-center space-x-4">
-              <button 
-                onclick={resetUpload}
-                class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-lg transition-colors">
-                Upload a different file
-              </button>
-              <button 
-                onclick={processFile}
-                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
-                Process this file
-              </button>
+            <div class="flex flex-col items-center justify-center">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+              <h2 class="text-xl font-medium text-gray-700 mb-2">Processing {files[0].name}...</h2>
+              <p class="text-gray-500">This may take a few moments.</p>
             </div>
           </div>
         {:else if processingFile || transcriptState.isLoading}
@@ -201,9 +232,78 @@
           </div>
         {:else if transcriptState.rawText}
           <div class="bg-white rounded-lg shadow-md p-8">
-            <h2 class="text-2xl font-medium text-gray-800 mb-4">Extracted Text</h2>
-            <div class="bg-gray-50 p-4 rounded-lg mb-6 max-h-96 overflow-y-auto whitespace-pre-wrap text-left">
-              {transcriptState.rawText}
+            <h2 class="text-2xl font-medium text-gray-800 mb-4">What would you like to do with your transcript?</h2>
+            
+            <!-- Transcript preview -->
+            <div class="bg-gray-50 p-4 rounded-lg mb-6 max-h-48 overflow-y-auto whitespace-pre-wrap text-left text-sm">
+              {transcriptState.rawText.slice(0, 500)}...
+            </div>
+            
+            <!-- Two-column options layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <!-- Left Column: Sermon Prep -->
+              <div class="bg-gray-50 p-6 rounded-lg">
+                <h3 class="text-lg font-medium text-gray-800 mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Sermon Prep
+                </h3>
+                
+                <div class="space-y-3">
+                  <label class="flex items-center space-x-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      class="form-checkbox h-5 w-5 text-blue-600 rounded" 
+                      checked={selectedOptions.sermonPrep.critique}
+                      onchange={() => selectedOptions.sermonPrep.critique = !selectedOptions.sermonPrep.critique}
+                    />
+                    <span class="text-gray-700">Critique my sermon</span>
+                  </label>
+                  
+                  <label class="flex items-center space-x-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      class="form-checkbox h-5 w-5 text-blue-600 rounded" 
+                      checked={selectedOptions.sermonPrep.perspectiveFeedback}
+                      onchange={() => selectedOptions.sermonPrep.perspectiveFeedback = !selectedOptions.sermonPrep.perspectiveFeedback}
+                    />
+                    <span class="text-gray-700">Perspective feedback</span>
+                  </label>
+                </div>
+              </div>
+              
+              <!-- Right Column: Sunday Content -->
+              <div class="bg-gray-50 p-6 rounded-lg">
+                <h3 class="text-lg font-medium text-gray-800 mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  Sunday Content
+                </h3>
+                
+                <div class="space-y-3">
+                  <label class="flex items-center space-x-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      class="form-checkbox h-5 w-5 text-blue-600 rounded" 
+                      checked={selectedOptions.sundayContent.bibleStudyGuide}
+                      onchange={() => selectedOptions.sundayContent.bibleStudyGuide = !selectedOptions.sundayContent.bibleStudyGuide}
+                    />
+                    <span class="text-gray-700">Bible Study Leaders Guide</span>
+                  </label>
+                  
+                  <label class="flex items-center space-x-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      class="form-checkbox h-5 w-5 text-blue-600 rounded" 
+                      checked={selectedOptions.sundayContent.kidsFollowAlong}
+                      onchange={() => selectedOptions.sundayContent.kidsFollowAlong = !selectedOptions.sundayContent.kidsFollowAlong}
+                    />
+                    <span class="text-gray-700">For The Kids: Follow along</span>
+                  </label>
+                </div>
+              </div>
             </div>
             
             <div class="flex justify-between">
@@ -213,8 +313,10 @@
                 Start Over
               </button>
               <button 
-                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
-                Continue with Analysis
+                onclick={handleGenerateContent}
+                disabled={!hasSelectedOptions()}
+                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                GO
               </button>
             </div>
           </div>
