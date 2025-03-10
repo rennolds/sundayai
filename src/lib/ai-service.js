@@ -18,41 +18,71 @@ export async function generateContent(transcript, options) {
     const results = {};
     const model = "gpt-4o"; // Using GPT-4 for better quality
     
-    // Generate content for each selected option in parallel
-    const promises = [];
+    // Create a queue of content generation tasks
+    const tasks = [];
     
     // Sermon Prep options
     if (options.sermonPrep.critique) {
-      promises.push(
-        generateSermonCritique(openai, model, transcript)
-          .then(result => { results.critique = result; })
-      );
+      tasks.push({
+        type: 'critique',
+        execute: () => generateSermonCritique(openai, model, transcript)
+      });
     }
     
     if (options.sermonPrep.perspectiveFeedback) {
-      promises.push(
-        generatePerspectiveFeedback(openai, model, transcript)
-          .then(result => { results.perspectiveFeedback = result; })
-      );
+      tasks.push({
+        type: 'perspectiveFeedback',
+        execute: () => generatePerspectiveFeedback(openai, model, transcript)
+      });
     }
     
     // Sunday Content options
     if (options.sundayContent.bibleStudyGuide) {
-      promises.push(
-        generateBibleStudyGuide(openai, model, transcript)
-          .then(result => { results.bibleStudyGuide = result; })
-      );
+      tasks.push({
+        type: 'bibleStudyGuide',
+        execute: () => generateBibleStudyGuide(openai, model, transcript)
+      });
     }
     
     if (options.sundayContent.kidsFollowAlong) {
-      promises.push(
-        generateKidsFollowAlong(openai, model, transcript)
-          .then(result => { results.kidsFollowAlong = result; })
-      );
+      tasks.push({
+        type: 'kidsFollowAlong',
+        execute: () => generateKidsFollowAlong(openai, model, transcript)
+      });
     }
     
-    // Wait for all content to be generated
-    await Promise.all(promises);
+            // Import the function to update content results as they become available
+    const updateContentResult = window.updateContentResult;
+    
+    // Process tasks sequentially to avoid rate limits
+    for (const task of tasks) {
+      try {
+        console.log(`Starting generation of ${task.type}...`);
+        const result = await task.execute();
+        results[task.type] = result;
+        
+        // If the updateContentResult function is available, update the UI as we go
+        if (typeof updateContentResult === 'function') {
+          updateContentResult(task.type, result);
+        }
+        
+        console.log(`Completed generation of ${task.type}`);
+        
+        // Add a small delay between API calls to further reduce rate limit issues
+        if (tasks.indexOf(task) < tasks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        console.error(`Error generating ${task.type}:`, error);
+        const errorMessage = `Error generating content: ${error.message}`;
+        results[task.type] = errorMessage;
+        
+        // If the updateContentResult function is available, update the UI with the error
+        if (typeof updateContentResult === 'function') {
+          updateContentResult(task.type, errorMessage);
+        }
+      }
+    }
     
     return results;
   } catch (error) {

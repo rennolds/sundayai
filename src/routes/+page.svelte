@@ -9,10 +9,11 @@
   import {
     generateAIContent,
     getContentState,
-    resetContent
+    resetContent,
+    updateContentResult
   } from '$lib/content-store.svelte.js';
   
-  // Import our React component
+  // Import our ContentResults component
   import ContentResults from '$lib/ContentResults.svelte';
   
   let files = $state(null);
@@ -40,6 +41,15 @@
   
   // Get the reactive content state
   const contentState = getContentState();
+
+  // Expose the updateContentResult function to the window object so it can be accessed by the AI service
+  $effect(() => {
+    // Only run this effect in the browser
+    if (typeof window !== 'undefined') {
+      // Add the update function to the window object so the AI service can use it
+      window.updateContentResult = updateContentResult;
+    }
+  });
   
   function handleFileSelect(event) {
     const selectedFiles = event.target.files;
@@ -158,9 +168,11 @@
     console.log('Generating content with selected options:', selectedOptions);
     
     try {
+      // Show results immediately - content will be generated sequentially
+      showResults = true;
+      
       // Generate content based on transcript and selected options
       await generateAIContent(transcriptState.rawText, selectedOptions);
-      showResults = true;
     } catch (error) {
       console.error('Error generating content:', error);
       fileError = `Error generating content: ${error.message}`;
@@ -242,7 +254,8 @@
           <!-- Show AI-generated content results -->
           <ContentResults 
             isLoading={contentState.isGenerating} 
-            results={contentState.results} 
+            results={contentState.results}
+            pendingItems={contentState.pendingItems}
             onBackClick={handleBackToOptions} 
           />
         {:else if !files || !fileUploaded}
