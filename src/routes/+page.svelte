@@ -146,6 +146,11 @@
       selectedOptions.sundayContent.kidsFollowAlong
     );
   }
+  
+  // Determine if the file is an audio file
+  function isAudioFile(file) {
+    return file && file.type && file.type.startsWith('audio/');
+  }
 </script>
 
 <div class="min-h-screen bg-gray-50 flex flex-col">
@@ -184,11 +189,14 @@
                 </svg>
                 <h2 class="text-xl font-medium text-gray-700 mb-2">Upload your transcript or sermon audio</h2>
                 <p class="text-gray-500 mb-4">Drag and drop your file here, or click to select files</p>
-                <p class="text-sm text-gray-400 mb-6">Supports MP3, WAV audio files or text documents (TXT, PDF, DOC, DOCX)</p>
+                <div class="text-sm text-gray-400 mb-6">
+                  <p>Supports MP3, WAV audio files or text documents (TXT, PDF, DOC, DOCX)</p>
+                  <p class="mt-1 text-blue-500 font-medium">Audio files will be transcribed automatically using AI</p>
+                </div>
                 
                 <label class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg cursor-pointer transition-colors">
                   Select File
-                  <input type="file" class="hidden" accept=".mp3,.wav,.txt,.pdf,.doc,.docx" onchange={handleFileSelect} />
+                  <input type="file" class="hidden" accept=".mp3,.wav,.txt,.pdf,.doc,.docx,audio/*" onchange={handleFileSelect} />
                 </label>
                 
                 {#if fileError}
@@ -210,8 +218,20 @@
           <div class="bg-white rounded-lg shadow-md p-8 text-center">
             <div class="flex flex-col items-center justify-center">
               <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-              <h2 class="text-xl font-medium text-gray-700 mb-2">Processing your file...</h2>
-              <p class="text-gray-500">This may take a few moments. {files[0].type.startsWith('audio/') ? 'Audio transcription takes longer.' : ''}</p>
+              <h2 class="text-xl font-medium text-gray-700 mb-2">
+                {#if isAudioFile(files[0])}
+                  Transcribing your audio...
+                {:else}
+                  Processing your file...
+                {/if}
+              </h2>
+              <p class="text-gray-500">
+                {#if isAudioFile(files[0])}
+                  Audio transcription may take several minutes depending on the file length.
+                {:else}
+                  This may take a few moments.
+                {/if}
+              </p>
             </div>
           </div>
         {:else if transcriptState.error}
@@ -232,7 +252,17 @@
           </div>
         {:else if transcriptState.rawText}
           <div class="bg-white rounded-lg shadow-md p-8">
-            <h2 class="text-2xl font-medium text-gray-800 mb-4">What would you like to do with your transcript?</h2>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-2xl font-medium text-gray-800">What would you like to do with your transcript?</h2>
+              {#if isAudioFile(files[0])}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  AI Transcribed
+                </span>
+              {/if}
+            </div>
             
             <!-- Transcript preview -->
             <div class="bg-gray-50 p-4 rounded-lg mb-6 max-h-48 overflow-y-auto whitespace-pre-wrap text-left text-sm">
